@@ -28,47 +28,60 @@ module Submission refines Assignment {
         for n := 0 to |a|+1 // n can be at most |a|
             invariant 0 <= start <= start + len <= |a|
             invariant isBoring(a, start, start+len)
-            // for all previous starting positions: every boring subsequence that starts there is no longer than the current best length
-            invariant forall i, j | 0 <= i < n :: i <= j <= |a| && isBoring(a, i, j) ==> j - i <= len
+            invariant forall i, j | 0 <= i < n :: i <= j <= |a| && isBoring(a, i, j) ==> j - i <= len // for all previous starting positions: len is the best length
         {
-            // This exists becuase we need to prove to the outer loop that we 
-            // only incremented len, and not just modified it willy-nilly.
-            var newLen := len;
-
-            for m := n to |a|+1 // m can be at most |a|
-                invariant 0 <= start <= start + newLen <= |a|
-                invariant isBoring(a, start, start+newLen)
-                invariant newLen >= len
-                // for all previous ending positions: if the sequence that ends here is boring it is no longer than the current best length
-                invariant forall j :: n <= j < m && isBoring(a, n, j) ==> j - n <= newLen
+            var newLen := findLongestBoringAt(a, n); // find the best possible boring sequence length
+            
+            // if its better than our current one, update the current one
+            if newLen > len
             {
-                // check if the sequence is boring
-                var flag := true;
-                for index := n to m
-                    invariant flag <==> isBoring(a, n, index)
-                {
-                    if a[index] != a[n]
-                    {
-                        flag := false;
-                    }
-                }
-                assert flag <==> isBoring(a, n, m); // variable flag correctly describes its purpose.
+                start := n;
+                len := newLen;
+            }
+
+            assert forall j :: n <= j <= |a| && isBoring(a, n, j) ==> j - n <= len; // invariant holds for this iteration
+        }
+    }
+
+    // helper method that finds the length of the longest possible boring subsequence starting at the index "start"
+    method findLongestBoringAt(a: seq<int>, start: int) returns (len: int)
+        requires 0 <= start <= |a|
+        ensures start <= start + len <= |a|
+        ensures isBoring(a, start, start + len)
+        ensures forall j :: start <= j <= |a| && isBoring(a, start, j) ==> j - start <= len
+    {
+        len := 0; // current best length
+
+        for m := start to |a|+1 // m can be at most |a|
+                invariant 0 <= start <= start + len <= |a|
+                invariant isBoring(a, start, start+len)
+                invariant forall j :: start <= j < m && isBoring(a, start, j) ==> j - start <= len // for all previous ending positions: len is the best length
+            {
+                var flag := checkBoring(a, start, m); // check if the sequence is boring
 
                 // if its boring and longer than the current best, update current best.
-                if flag && (m - n > newLen)
-                {
-                    start := n;
-                    newLen := m - n;
+                if flag && (m - start > len) 
+                { 
+                    len := m - start; 
                 }
 
-                // invariant holds for this iteration
-                assert isBoring(a, n, m) ==> m - n <= newLen;
+                assert isBoring(a, start, m) ==> m - start <= len; // invariant holds for this iteration
             }
-            len := newLen;
+    }
 
-            // result of loop: every boring subsequence that starts at n is no longer than the current best length
-            assert forall j :: n <= j <= |a| && isBoring(a, n, j) ==> j - n <= len;
+    // helper method that returns true if an only if the subsequence is boring
+    method checkBoring(a: seq<int>, start: int, end: int) returns (flag: bool)
+        requires 0 <= start <= end <= |a|
+        ensures flag <==> isBoring(a, start, end)
+    {
+        flag := true;
+        for index := start to end
+            invariant flag <==> isBoring(a, start, index)
+        {
+            if a[index] != a[start]
+            {
+                flag := false;
+            }
         }
-        assert forall i, j :: 0 <= i <= j <= |a| && isBoring(a, i, j) ==> j - i <= len;
     }
 }

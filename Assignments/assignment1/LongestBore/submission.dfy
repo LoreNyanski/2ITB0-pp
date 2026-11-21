@@ -30,7 +30,7 @@ module Submission refines Assignment {
             invariant isBoring(a, start, start+len)
             invariant forall i, j | 0 <= i < n :: i <= j <= |a| && isBoring(a, i, j) ==> j - i <= len // for all previous starting positions: len is the best length
         {
-            var newLen := findLongestBoringAt(a, n); // find the best possible boring sequence length
+            var newLen := findLongestBoringAt(a, n); // find the best possible boring sequence length at this start
             
             // if its better than our current one, update the current one
             if newLen > len
@@ -53,20 +53,21 @@ module Submission refines Assignment {
         len := 0; // current best length
 
         for m := start to |a|+1 // m can be at most |a|
-                invariant 0 <= start <= start + len <= |a|
-                invariant isBoring(a, start, start+len)
-                invariant forall j :: start <= j < m && isBoring(a, start, j) ==> j - start <= len // for all previous ending positions: len is the best length
-            {
-                var flag := checkBoring(a, start, m); // check if the sequence is boring
+            invariant 0 <= start <= start + len <= |a|
+            invariant isBoring(a, start, start+len)
+            invariant forall j :: start <= j < m && isBoring(a, start, j) ==> j - start <= len // for all previous ending positions: len is the best length
+        {
+            // apparently isBoring() would also work here, but predicate feels like a specification language thing, not a programming language thing
+            var flag := checkBoring(a, start, m); // check if the sequence is boring
 
-                // if its boring and longer than the current best, update current best.
-                if flag && (m - start > len) 
-                { 
-                    len := m - start; 
-                }
-
-                assert isBoring(a, start, m) ==> m - start <= len; // invariant holds for this iteration
+            // if its boring and longer than the current best, update current best.
+            if flag && (m - start > len) 
+            { 
+                len := m - start; 
             }
+
+            assert isBoring(a, start, m) ==> m - start <= len; // invariant holds for this iteration
+        }
     }
 
     // helper method that returns true if an only if the subsequence is boring
